@@ -1,0 +1,5 @@
+t = seq(1,47,1)
+phi = runif(1)
+y = cos(2*pi*(t/12+phi))
+tt = expression(Y[t] == cos(2*pi(frac(t,12)+phi)))
+plot(t,y, main = tt)

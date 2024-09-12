@@ -1,0 +1,48 @@
+---
+title: "TSA_HW1_Rmd"
+author: "Hung-Ta, Wang_R13546017"
+date: "September 2, 2024"
+output: pdf_document
+latex_engine: xelatex
+---
+
+# 1.
+
+## Code Implementation
+```{r}
+curve(sin(x/2.1)+x/6,1,48)
+```
+
+
+### Explaination
+We can use sin(x) to simulate the fluctuation of the picture.\newline
+In addition, adding x/6 can make the value of the function increment as x becomes larger.
+
+# 2.
+
+## Code Implementation
+
+```{r}
+library(ggplot2)
+data <- data.frame(
+  x = seq(1,47,1),
+  y = 0
+)
+
+i=1
+while (i <= 47) {
+  phi = runif(1)
+  data$y[i] <- cos(2*pi*(data$x[i]/12+phi))
+  i <- i + 1
+}
+
+tt = expression(Y[t] == cos(2*pi(frac(t,12)+phi)))
+ggplot(data, aes(x = x, y = y)) +
+  geom_point(color = "#037ffc", size = 1.5) + 
+  geom_line(color = "#037ffc") +
+  labs(x = "Time", y = "Y_t", title = tt) +
+  theme_minimal()
+```
+
+### Explaination
+We simulate the formula on the sheet by R.
