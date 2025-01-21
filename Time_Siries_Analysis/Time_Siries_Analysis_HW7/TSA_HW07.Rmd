@@ -1,0 +1,65 @@
+---
+title: "Time Series Analysis Homework07 Explaination"
+author: "Hung-Ta, Wang (R13546017)"
+date: "December 08, 2024"
+output: pdf_document
+latex_engine: xelatex
+---
+
+## 5. Consider the well-known time series data “co2” (monthly carbon dioxide readings through 11 years in Alert, Canada).
+
+### 5.a. Fit a deterministic regression model in terms of months and time. Are the regression coefficients significant? What is the adjusted R-squared? (Note that the month variable should be treated as categorical and transformed into 11 dummy variables.)
+
+```{r message=FALSE, warning=FALSE}
+library(forecast)
+library(TSA)
+library(tseries)
+library(tidyverse)
+
+data <- read.csv("C:/Git_Code/Some-practice/TSA HW07.co2.csv")
+data$month <- factor(data$month, levels = unique(data$month))
+model <- lm(co2_level ~ time_trend + month, data = data)
+summary(model)
+cat("Adjusted R-squared:", summary(model)$adj.r.squared)
+```
+
+#### Explanation:
+
+All regression coefficients are significant except monthFeb and monthJun.
+The adjusted R-squared is 0.9891657.
+
+### 5.b. Identify, estimate the SARIMA model for the co2 level.
+
+```{r message=FALSE, warning=FALSE}
+co2_ts <- ts(data$co2_level, start = c(1994, 1), frequency = 12)
+plot(co2_ts, main = "CO2 Levels Over Time", ylab = "CO2 Level", xlab = "index t")
+
+sarima_model <- auto.arima(co2_ts, seasonal = TRUE, stepwise = FALSE, approximation = FALSE)
+summary(sarima_model)
+checkresiduals(sarima_model)
+```
+
+#### Explanation:
+
+We can see that SARIMA(1,0,1)(0,1,1)[12] can fit the data and Ljung Box test also shows that the residual is stationary process.
+
+### 5.c. Compare the two models above, what do you observe?
+
+```{r message=FALSE, warning=FALSE}
+calculate_mape <- function(actual, predicted) {
+  return(mean(abs((actual - predicted) / actual)) * 100)
+}
+
+deterministic_predictions <- as.numeric(predict(model, newdata = data))
+sarima_predictions <- as.numeric(fitted(sarima_model))
+
+mape_deterministic <- calculate_mape(data$co2_level, deterministic_predictions)
+mape_sarima <- calculate_mape(data$co2_level, sarima_predictions)
+
+cat("MAPE for Deterministic Regression:", mape_deterministic, "%\n")
+cat("MAPE for SARIMA Model:", mape_sarima, "%\n")
+```
+
+#### Explanation:
+
+We can see that the MAPE for Deterministic Regression is 0.1693098 % and  MAPE for SARIMA Model is 0.1469965 %. Thus, we can conclude that SARIMA is slightly better than Deterministic Regression. Both models has a great performance in the dataset.

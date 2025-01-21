@@ -1,0 +1,209 @@
+---
+title: "Time Series Analysis Homework08 Explaination"
+author: "Hung-Ta, Wang (R13546017)"
+date: "December 08, 2024"
+output: pdf_document
+latex_engine: xelatex
+---
+
+## 2. Recall the dataset “robot” firstly introduced in TSA HW06.
+
+### 2.a. Use IMA(1, 1) to forecast five values ahead and calculate the 95% confidence intervals.
+
+```{r message=FALSE, warning=FALSE}
+library(forecast)
+library(TSA)
+library(tseries)
+
+robot_data <- read.csv("C:/Git_Code/Some-practice/TSA HW06.robot.csv")
+robot_ts <- ts(robot_data$robot)
+robot_ima <- Arima(robot_ts, order = c(0, 1, 1))
+forecast_result_ima <- forecast(robot_ima, h = 5)
+print(forecast_result_ima)
+```
+
+#### Explanation:
+
+We can see that all forecast values are in 95% confidence intervals.
+
+### 2.b. Display the actual values, the five forecasts and the 95% confidence intervals of the five forecasts, all in
+
+```{r message=FALSE, warning=FALSE}
+plot(forecast_result_ima, 
+     main = "Forecast with 95% Confidence Intervals of IMA(1,1)", 
+     xlab = "t (index)", ylab = "Values")
+```
+
+#### Explanation:
+
+We can see that the blue line is in the gray zone.
+
+### 2.c. Use ARMA(1, 1) to forecast five values ahead and calculate the 95% confidence intervals. Compare the results with those in (a), what do you observe?
+
+```{r message=FALSE, warning=FALSE}
+robot_arma <- Arima(robot_ts, order = c(1, 0, 1))
+forecast_result_arma <- forecast(robot_arma, h = 5)
+print(forecast_result_arma)
+plot(forecast_result_arma, 
+     main = "Forecast with 95% Confidence Intervals of ARMA(1,1)", 
+     xlab = "t (index)", ylab = "Values")
+```
+
+#### Explanation:
+
+We can see that all forecast values are in 95% confidence intervals just like the blue line is in the gray zone.
+
+
+## 3. The dataset “boardings” contains the monthly number of passengers who boarded light rail trains and buses in Denver, Colorado, from August 2000 to March 2006.
+
+### 3.a. Plot the time series and tell your observation if there exists seasonality and if the series is stationary. 
+
+```{r message=FALSE, warning=FALSE}
+boardings_data <- read.csv("C:/Git_Code/Some-practice/TSA HW08.boardings.csv")
+boardings_ts <- ts(boardings_data$log_boardings, start = c(2000, 8), frequency = 12)
+plot(boardings_ts, main = "Time Series of Boardings", 
+     xlab = "t (index)", ylab = "Log Boardings")
+decomposed_boardings_ts <- decompose(boardings_ts)
+plot(decomposed_boardings_ts)
+```
+
+#### Explanation:
+
+We can see that the observation exists seasonality by the graph of decomposed time series. $\\$
+The series is not stationary by its seasonality and trend.
+
+### 3.b. Plot the sample ACF and see what are the significant lags?
+
+```{r message=FALSE, warning=FALSE}
+acf(boardings_ts, main = "Sample ACF of Time Series of Boardings")
+```
+
+#### Explanation:
+
+We can observe that the $1^{st}, 5^{th}, 6^{th}, 7^{th}, 12^{th}$ bar is out of the interval. These are the significant lags.
+
+### 3.c. Fit the data with ARMA(0, 3) × (1,0)_12, evaluate if the estimated coefficients $\{ \theta_1, \theta_2, \theta_3, \phi_{12} \}$ are significant. 
+
+```{r message=FALSE, warning=FALSE}
+pacf(boardings_ts, main = "Sample PACF of Time Series of Boardings")
+
+
+model <- Arima(boardings_ts, order = c(0, 0, 3), seasonal = c(1, 0, 0))
+summary(model)
+coefficients <- coef(model)
+standard_errors <- sqrt(diag(model$var.coef))
+t_values <- coefficients / standard_errors
+results <- data.frame(
+  Coefficient = coefficients,
+  `Standard Error` = standard_errors,
+  `t-value` = t_values
+)
+print(results)
+```
+
+#### Explanation:
+
+We have degree of freedom: 69-1 = 68. If t.value is greater than 2 or less than 2, it is significant.
+For 95% confidence interval, we can see that t.value are all greater than 2. Thus, all coefficients are significant.
+However, t.value of ma1, ma2, ma3 are decreasing since ma1 is significant by observing ACF.
+
+## 4. The monthly airline passengers, first investigated by Box and Jenkins in 1976, is considered as the classic time series dataset (see “TSA HW08.airpass.csv”).
+
+### 4.a. Plot the time series in its original scale and the log-transformed scale. Do you think making the log-transformation is appropriate?
+
+```{r message=FALSE, warning=FALSE}
+airpass_data <- read.csv("C:/Git_Code/Some-practice/TSA HW08.airpass.csv")
+airpass_ts <- ts(airpass_data$airpass, start = c(1976,1) , frequency = 12)
+log_airpass_ts <- log(airpass_ts)
+
+plot(airpass_ts, 
+     main = "Time Series of Airpass", 
+     xlab = "t (index)", ylab = "Passengers")
+plot(log_airpass_ts, 
+     main = "Time Series of Airpass(log)", 
+     xlab = "t (index)", ylab = "Passengers(log)")
+```
+
+#### Explanation:
+
+We can see that there are trend and seasonality in the time series no matter it is log-transformed. From the aspect of making data stationary, I do not think log-transformation is an appropriate way.
+
+### 4.b. Make the first-order difference over the “log-transformed” data. What do you observe?
+
+```{r message=FALSE, warning=FALSE}
+diff_log_airpass_ts <- diff(log_airpass_ts)
+plot(diff_log_airpass_ts, 
+     main = "Time Series of Airpass(log and diff)", 
+     xlab = "t (index)", ylab = "Passengers(log and diff)")
+
+
+acf(log_airpass_ts, main = "ACF of log_airpass_ts")
+acf(diff_log_airpass_ts, main = "ACF of diff_log_airpass_ts")
+```
+
+#### Explanation:
+
+We can see that the first-order difference over the log-transformed data may be not stationary. However, from the aspect of stationarity , it is much better than log-transformation.
+
+### 4.c. Make a seasonal difference of the resulted series in (b), what do you observe?
+
+```{r message=FALSE, warning=FALSE}
+seasonality_diff_log_airpass_ts <- diff(diff_log_airpass_ts, lag = 12)
+plot(seasonality_diff_log_airpass_ts, 
+     main = "Time Series of Airpass(log and diff and seasonality)", 
+     xlab = "t (index)", ylab = "Passengers(log and diff and seasonality)")
+```
+
+#### Explanation:
+
+We can see that the time series seems to be more stationary than the resulted series in (b). However, we still cannot ensure that it is stationary merely by the graph. 
+
+### 4.d. Plot the sample ACF of the resulted series in (c), explain what you see.
+
+```{r message=FALSE, warning=FALSE}
+acf(seasonality_diff_log_airpass_ts, 
+    main = "Sample ACF of Time Series of Airpass(log and diff and seasonality)")
+```
+
+#### Explanation:
+
+We can see that there are more sample ACF in the confidence interval which means there are less ACF are significant. However, we cannot observe an obvious pattern, such as cut-off in the ACF graph. However, from the aspect of stationarity , it is a bit better than the resulted series in (b).
+
+### 4.e. Fit an ARIMA(0,1,1) × (0,1,1)_12 model to the log-transformed series. Diagnose the residuals of this model, including the sample ACF and the normality test
+
+```{r message=FALSE, warning=FALSE}
+airpass_sarima <- Arima(log_airpass_ts, order = c(0, 1, 1), seasonal = c(0, 1, 1))
+summary(airpass_sarima)
+residuals <- residuals(airpass_sarima)
+checkresiduals(residuals)
+acf(residuals, main = "Sample ACF of Residuals")
+adf.test(residuals)
+qqnorm(residuals)
+qqline(residuals)
+```
+
+#### Explanation:
+
+Sample ACF shows that the ACF of the residuals are separate and there is not a obvious pattern. We guess that the ACF may be stationary.
+Moreover, We can see that the Ljung Box test and ADF test are all show that the residuals is a stationary process.
+From Normal Q Q Plot, The residuals are approximately normal, it may slightly not follow normal distribution on two side.
+
+### 4.f. Make forecasts for “two” years based on the model in (e). The confidence intervals shall be included.
+
+```{r message=FALSE, warning=FALSE}
+airpass_sarima_seasonality_diff_log_airpass_ts <- Arima(seasonality_diff_log_airpass_ts, order = c(0, 1, 1), seasonal = c(0, 1, 1))
+forecasts_airpass_sarima_seasonality_diff_log_airpass_ts <- forecast(airpass_sarima_seasonality_diff_log_airpass_ts, h = 24)
+plot(forecasts_airpass_sarima_seasonality_diff_log_airpass_ts, main = "Two-Year Forecast with Confidence Intervals",
+     xlab = "Time", ylab = "airpass_sarima_seasonality_diff_log_airpass_ts")
+
+airpass_sarima_airpass_ts <- Arima(airpass_ts, order = c(0, 1, 1), seasonal = c(0, 1, 1))
+forecasts_Passengers <- forecast(airpass_sarima_airpass_ts, h = 24)
+plot(forecasts_Passengers, main = "Two-Year Forecast with Confidence Intervals",
+     xlab = "Time", ylab = "Air Passengers(Original)")
+print(forecasts_airpass_sarima_seasonality_diff_log_airpass_ts)
+print(forecasts_Passengers)
+```
+
+#### Explanation:
+
+We can see that no matter original and seasonality diff log data are all in confidence interval.

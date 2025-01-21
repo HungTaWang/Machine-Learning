@@ -1,0 +1,175 @@
+library(forecast)
+library(TSA)
+library(tseries)
+
+# 1. Simulate a time series $y_t$ of length $n = 100$ following an ARMA(1,1) model with $\phi = 0.8$ and $\theta = 0.4$.
+n <- 100    
+phi <- 0.8  
+theta <- -0.4
+max_lag <- 20
+
+rho <- numeric(max_lag + 1)
+rho[1] <- 1
+
+set.seed(1)
+arma_model <- arima.sim(model = list(ar = phi, ma = theta), n = n)
+plot(arma_model, main = "ARMA(1,1): 100 Samples", ylab = "$y_t$", xlab = "Time")
+
+## 1.a. Calculate and plot the theoretical autocorrelation function for this model. Plot sufficient lags until the correlations are negligible.
+for (k in 1:max_lag) {
+  rho[k + 1] <- phi * rho[k]
+}
+
+lags <- 0:max_lag
+
+plot(lags, rho, type = "h", xlab = "Lag", ylab = "ACF",
+     main = "Theoretical ACF of ARMA(1,1)", col = "black", lwd = 1)
+points(lags, rho, pch = 16, col = "#3399FF")
+abline(h = 0, col = "black")
+
+
+## 1.b. Calculate and plot the sample ACF for your simulated series. How well do the values and patterns match the theoretical ACF from part (a)?
+acf(arma_model, lag.max = max_lag, main = "Sample ACF of ARMA(1,1)")
+
+## 1.c. Calculate and interpret the sample EACF for this series. Does the EACF help you specify the correct orders for the model?
+eacf(arma_model, ar.max = 9, ma.max = 9)
+
+## 1.d. Repeat parts (b) and (c) with a new simulation using the same parameter values but sample size $n = 24$.
+### 1.d.b.
+n <- 24
+max_lag <- 5 
+rho <- numeric(max_lag + 1)
+rho[1] <- 1
+
+arma_model <- arima.sim(model = list(ar = phi, ma = theta), n = n)
+plot(arma_model, main = "ARMA(1,1): 24 Samples", ylab = "$y_t$", xlab = "Time")
+
+for (k in 1:max_lag) {
+  rho[k + 1] <- phi * rho[k]
+}
+
+lags <- 0:max_lag
+
+plot(lags, rho, type = "h", xlab = "Lag", ylab = "ACF",
+     main = "Theoretical ACF of ARMA(1,1)", col = "black", lwd = 1)
+points(lags, rho, pch = 16, col = "#3399FF")
+abline(h = 0, col = "black")
+
+acf(arma_model, lag.max = max_lag, main = "Sample ACF of ARMA(1,1)")
+
+### 1.d.c.
+
+eacf_matrix <- eacf(arma_model, ar.max = 5, ma.max = 5)
+
+## 1.e. Repeat parts (b) and (c) with a new simulation using the same parameter values but sample size $n = 1000$.
+### 1.e.b.
+n <- 1000
+max_lag <- 50
+rho <- numeric(max_lag + 1)
+rho[1] <- 1
+
+arma_model <- arima.sim(model = list(ar = phi, ma = theta), n = n)
+plot(arma_model, main = "ARMA(1,1): 1000 Samples", ylab = "$y_t$", xlab = "Time")
+
+for (k in 1:max_lag) {
+  rho[k + 1] <- phi * rho[k]
+}
+
+lags <- 0:max_lag
+
+plot(lags, rho, type = "h", xlab = "Lag", ylab = "ACF",
+     main = "Theoretical ACF of ARMA(1,1)", col = "black", lwd = 1)
+points(lags, rho, pch = 16, col = "#3399FF")
+abline(h = 0, col = "black")
+
+acf(arma_model, lag.max = max_lag, main = "Sample ACF of ARMA(1,1)")
+
+### 1.e.c
+eacf_matrix <- eacf(arma_model, ar.max = 9, ma.max = 9)
+
+## 2.
+phi <- 0.7
+theta <- 0.6
+n <- 48
+df <- 6
+
+set.seed(0)
+errors <- rt(n, df = df)
+errors <- errors - mean(errors)
+
+
+arma_model <- numeric(n)
+arma_model[1] <- 0
+
+for (t in 2:n) {
+  arma_model[t] <- phi * arma_model[t - 1] + errors[t] + theta * errors[t - 1]
+}
+
+plot(arma_model, type = "o", main = "Simulated ARMA(1,1) Series",
+     xlab = "Time", ylab = "$y_t$", col = "#3399FF", pch = 16)
+
+### 2.a. Display the sample EACF of the series. Is an ARMA(1,1) model suggested?
+eacf_matrix <- eacf(arma_model, ar.max = 9, ma.max = 9)
+
+### 2.b. Estimate $\phi$ and $\theta$ from the series and comment on the results.
+
+arma_fit <- arima(arma_model, order = c(1, 0, 1), method = "ML")
+summary(arma_fit)
+
+phi_hat <- arma_fit$coef["ar1"]
+theta_hat <- arma_fit$coef["ma1"]
+
+cat(sprintf("Estimated phi: %.4f\n", phi_hat))
+cat(sprintf("Estimated theta: %.4f\n", theta_hat))
+
+## 3. The data file named robot contains a time series obtained from an industrial robot. The robot was put through a sequence of maneuvers, and the distance from a desired ending point was recorded in inches.
+### 3.a. Display the time series plot of the data. Based on the chart, do these data appear to come from a stationary or nonstationary process?
+file_path <- "C:/Git_Code/Some-practice/TSA HW06.robot.csv"
+robot_data <- read.csv(file_path)
+robot_ts <- ts(robot_data$robot)
+plot(robot_ts, type = "o", col = "#3399FF", main = "Time Series of Robot Data",
+     xlab = "Time Index", ylab = "Inches", lwd = 2)
+
+adf_test <- adf.test(robot_ts)
+print(adf_test)
+
+if (adf_test$p.value < 0.05) {
+  cat("The time series is stationary (reject null hypothesis of unit root).\n")
+} else {
+  cat("The time series is non-stationary (fail to reject null hypothesis of unit root).\n")
+}
+
+### 3.b. Calculate and plot the sample ACF and PACF for these data. Based on this additional information, do these data appear to come from a stationary or nonstationary process?
+acf(robot_ts, main = "Sample ACF of Robot Data")
+pacf(robot_ts, main = "Sample PACF of Robot Data")
+
+### 3.c. Calculate and interpret the sample EACF
+eacf_result <- eacf(robot_ts,  ar.max = 9, ma.max = 9)
+
+### 3.d. Estimate the parameters of an AR(1) model and IMA(1, 1) for these data, respectively.
+
+ar1_fit <- Arima(robot_ts, order = c(1, 0, 0))
+phi_hat <- arma_fit$coef["ar1"]
+cat(sprintf("Estimated phi: %.4f\n", phi_hat))
+
+
+ima_fit <- Arima(robot_ts, order = c(0, 1, 1))
+theta_hat <- ima_fit$coef["ma1"]
+cat(sprintf("Estimated theta: %.4f\n", theta_hat))
+
+### 3.e. Compare the results from parts (d) in terms of AIC and discuss the residual tests.
+ar1_aic <- AIC(ar1_fit)
+ima_aic <- AIC(ima_fit)
+cat(sprintf("AIC of AR(1): %.2f\n", ar1_aic))
+cat(sprintf("AIC of IMA(1,1): %.2f\n", ima_aic))
+if (ar1_aic < ima_aic) {
+  cat("The AR(1) model has a lower AIC and is preferred.\n")
+} else {
+  cat("The IMA(1,1) model has a lower AIC and is preferred.\n")
+}
+
+cat("\nResidual Diagnostics for AR(1):\n")
+checkresiduals(ar1_fit)
+
+cat("\nResidual Diagnostics for IMA(1,1):\n")
+checkresiduals(ima_fit)
